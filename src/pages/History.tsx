@@ -7,17 +7,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { MapPin, Upload, Download, LogOut, Cloud, Home, MessageSquare, Clock, Trash2, Copy, CheckCircle2 } from "lucide-react";
+import { MapPin, Upload, Download, LogOut, Cloud, Home } from "lucide-react";
 import { toast } from "sonner";
 import PosterPicker from "@/components/PosterPicker";
-
-interface ChatHistoryItem {
-  id: string;
-  question: string;
-  answer: string;
-  created_at: string;
-}
 
 const History = () => {
   const [themeColor] = useState<string>("#d4eaf7");
@@ -37,15 +29,9 @@ const History = () => {
   const [cloudLoading, setCloudLoading] = useState(false);
   
   const [refreshKey, setRefreshKey] = useState(0);
-  
-  // Chat history state
-  const [chatHistory, setChatHistory] = useState<ChatHistoryItem[]>([]);
-  const [chatLoading, setChatLoading] = useState(true);
-  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   useEffect(() => {
     checkAdminStatus();
-    loadChatHistory();
   }, []);
 
   async function checkAdminStatus() {
@@ -163,46 +149,6 @@ const History = () => {
     }
   }
 
-  async function loadChatHistory() {
-    try {
-      const { data, error } = await supabase
-        .from('chat_history')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      setChatHistory(data || []);
-    } catch (error) {
-      console.error('Error loading chat history:', error);
-    } finally {
-      setChatLoading(false);
-    }
-  }
-
-  async function deleteHistoryItem(id: string) {
-    try {
-      const { error } = await supabase
-        .from('chat_history')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
-      
-      setChatHistory(prev => prev.filter(item => item.id !== id));
-      toast.success('Chat entry removed from history');
-    } catch (error) {
-      console.error('Error deleting chat history:', error);
-      toast.error('Failed to delete chat entry');
-    }
-  }
-
-  function copyToClipboard(text: string, id: string) {
-    navigator.clipboard.writeText(text);
-    setCopiedId(id);
-    setTimeout(() => setCopiedId(null), 2000);
-    toast.success('Text copied to clipboard');
-  }
-
   return (
     <div className="min-h-screen" style={{ 
       background: 'linear-gradient(135deg, hsl(var(--parchment)) 0%, hsl(var(--parchment-dark)) 100%)',
@@ -247,14 +193,10 @@ const History = () => {
       <div className="p-6 md:p-8 max-w-7xl mx-auto">
         <Tabs defaultValue="library" className="w-full">
           <TabsList className="grid w-full mb-6 bg-[hsl(var(--card))] border-2 border-[hsl(var(--brass))]"
-                    style={{ gridTemplateColumns: isAdmin ? '1fr 1fr 1fr 1fr' : '1fr 1fr' }}>
+                    style={{ gridTemplateColumns: isAdmin ? '1fr 1fr 1fr' : '1fr' }}>
             <TabsTrigger value="library" className="flex items-center gap-2 data-[state=active]:bg-[hsl(var(--gold))] data-[state=active]:text-[hsl(var(--leather))]">
               <MapPin className="w-4 h-4" />
               Map Library
-            </TabsTrigger>
-            <TabsTrigger value="chat" className="flex items-center gap-2 data-[state=active]:bg-[hsl(var(--gold))] data-[state=active]:text-[hsl(var(--leather))]">
-              <MessageSquare className="w-4 h-4" />
-              AI Chats
             </TabsTrigger>
             {isAdmin && (
               <>
@@ -283,93 +225,23 @@ const History = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent className="pt-6">
-                <PosterPicker key={refreshKey} onOpen={handleOpenPoster} />
+                <div className="space-y-4">
+                  <PosterPicker key={refreshKey} onOpen={handleOpenPoster} />
+                  <div className="flex justify-end pt-4 border-t border-[hsl(var(--border))]">
+                    <Button 
+                      variant="outline" 
+                      className="border-[hsl(var(--brass))] text-[hsl(var(--brass))] hover:bg-[hsl(var(--brass))] hover:text-[hsl(var(--parchment))]"
+                      disabled
+                    >
+                      <MapPin className="w-4 h-4 mr-2" />
+                      Load Selected Map
+                    </Button>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
 
-          {/* Chat History Tab */}
-          <TabsContent value="chat">
-            <Card className="border-2 border-[hsl(var(--brass))] shadow-xl bg-[hsl(var(--card))]">
-              <CardHeader className="border-b border-[hsl(var(--border))]">
-                <CardTitle className="flex items-center gap-2 text-2xl" style={{ fontFamily: 'Georgia, serif' }}>
-                  <MessageSquare className="w-6 h-6 text-[hsl(var(--brass))]" />
-                  AI Conversation Archive
-                </CardTitle>
-                <CardDescription className="italic">
-                  Your historical inquiries and AI-generated responses (Future: FAQ generation)
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="pt-6">
-                {chatLoading ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    Loading conversation history...
-                  </div>
-                ) : chatHistory.length === 0 ? (
-                  <div className="text-center py-12 space-y-3">
-                    <MessageSquare className="h-12 w-12 mx-auto text-muted-foreground/50" />
-                    <p className="text-muted-foreground italic">No conversations recorded yet</p>
-                    <Button variant="outline" asChild>
-                      <Link to="/chat">Start a conversation with the historian</Link>
-                    </Button>
-                  </div>
-                ) : (
-                  <ScrollArea className="h-[600px] pr-4">
-                    <div className="space-y-4">
-                      {chatHistory.map((item) => (
-                        <Card key={item.id} className="border-border/50 bg-muted/20">
-                          <CardHeader className="pb-3">
-                            <div className="flex items-start justify-between gap-4">
-                              <div className="flex-1 space-y-1">
-                                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                  <Clock className="h-3 w-3" />
-                                  {new Date(item.created_at).toLocaleString()}
-                                </div>
-                                <CardTitle className="text-base font-semibold text-foreground font-serif">
-                                  📜 {item.question}
-                                </CardTitle>
-                              </div>
-                              <div className="flex items-center gap-1">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => copyToClipboard(item.answer, item.id)}
-                                  title="Copy answer"
-                                >
-                                  {copiedId === item.id ? (
-                                    <CheckCircle2 className="h-4 w-4 text-green-500" />
-                                  ) : (
-                                    <Copy className="h-4 w-4" />
-                                  )}
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => deleteHistoryItem(item.id)}
-                                  className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                                  title="Delete entry"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            </div>
-                          </CardHeader>
-                          <CardContent>
-                            <div className="bg-card/50 rounded-lg p-4 border border-border/50">
-                              <p className="text-sm font-medium text-primary mb-2 font-serif">📖 Answer:</p>
-                              <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed font-serif">
-                                {item.answer}
-                              </p>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
-                  </ScrollArea>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
 
           {/* Upload Tab */}
           {isAdmin && (

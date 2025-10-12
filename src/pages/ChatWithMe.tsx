@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Mic, Square, Send, Volume2, Loader2 } from "lucide-react";
+import { Mic, Square, Send, Volume2, Loader2, History } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -208,16 +208,24 @@ const ChatWithMe = () => {
       
       {/* Header */}
       <div 
-        className="w-full opacity-92 p-4 pl-12 text-foreground text-xl font-bold ml-4 flex items-center gap-3"
+        className="w-full opacity-92 p-4 pl-12 text-foreground text-xl font-bold ml-4 flex items-center justify-between gap-3"
         style={{ backgroundColor: themeColor }}
       >
-        <Button variant="ghost" asChild className="mr-4">
-          <Link to="/" className="flex items-center gap-2 text-foreground hover:text-primary">
-            ← Dashboard
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" asChild className="mr-4">
+            <Link to="/" className="flex items-center gap-2 text-foreground hover:text-primary">
+              ← Dashboard
+            </Link>
+          </Button>
+          <span className="text-4xl">🗺️</span>
+          The Cartographer's Study
+        </div>
+        <Button variant="ghost" asChild className="flex items-center gap-2 text-foreground hover:text-primary">
+          <Link to="/chat-history">
+            <History className="w-4 h-4" />
+            View Chat History
           </Link>
         </Button>
-        <span className="text-4xl">🗺️</span>
-        The Cartographer's Study
       </div>
       
       {/* Main Content */}
