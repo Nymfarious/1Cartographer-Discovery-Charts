@@ -3,7 +3,9 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Mic, Square, Send, Volume2, Loader2, History } from "lucide-react";
+import { Mic, Square, Send, Volume2, Loader2, History, MessageSquare, Home, LogOut, ArrowLeft } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
+import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -17,6 +19,12 @@ const ChatWithMe = () => {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const { toast } = useToast();
+  const navigate = useNavigate();
+
+  async function handleSignOut() {
+    await supabase.auth.signOut();
+    navigate('/');
+  }
 
   useEffect(() => {
     const color = localStorage.getItem("favcolor") || "#d4eaf7";
@@ -199,37 +207,52 @@ const ChatWithMe = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Sidebar */}
-      <div 
-        className="fixed left-0 top-0 bottom-0 w-4 opacity-90 z-10"
-        style={{ backgroundColor: themeColor }}
-      />
+    <div className="min-h-screen" style={{ 
+      background: 'linear-gradient(135deg, hsl(var(--parchment)) 0%, hsl(var(--parchment-dark)) 100%)',
+      backgroundAttachment: 'fixed'
+    }}>
+      {/* Decorative border */}
+      <div className="fixed inset-0 pointer-events-none border-8 border-double opacity-30 z-50" 
+           style={{ borderColor: 'hsl(var(--brass))' }} />
       
-      {/* Header */}
-      <div 
-        className="w-full opacity-92 p-4 pl-12 text-foreground text-xl font-bold ml-4 flex items-center justify-between gap-3"
-        style={{ backgroundColor: themeColor }}
-      >
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" asChild className="mr-4">
-            <Link to="/" className="flex items-center gap-2 text-foreground hover:text-primary">
-              ← Dashboard
-            </Link>
-          </Button>
-          <span className="text-4xl">🗺️</span>
-          The Cartographer's Study
+      {/* Header with consistent styling */}
+      <header className="sticky top-0 z-20 backdrop-blur-sm bg-card/95 border-b-2 border-[hsl(var(--brass))] shadow-lg">
+        <div className="container mx-auto px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <Button variant="ghost" size="sm" asChild>
+                <Link to="/" className="flex items-center gap-2 hover:text-primary transition-colors">
+                  <ArrowLeft className="h-4 w-4" />
+                  <span>Dashboard</span>
+                </Link>
+              </Button>
+              <Separator orientation="vertical" className="h-6" />
+              <div className="flex items-center gap-2">
+                <MessageSquare className="h-5 w-5 text-primary" />
+                <h1 className="text-2xl font-bold text-foreground" style={{ fontFamily: 'Georgia, serif' }}>
+                  History AI Assistant
+                </h1>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" asChild className="border-[hsl(var(--brass))]">
+                <Link to="/chat-history" className="flex items-center gap-2">
+                  <History className="w-4 h-4" />
+                  <span>Chat History</span>
+                </Link>
+              </Button>
+              <Button variant="ghost" size="sm" onClick={handleSignOut}>
+                <LogOut className="w-4 h-4 mr-2" />
+                Sign Out
+              </Button>
+            </div>
+          </div>
         </div>
-        <Button variant="ghost" asChild className="flex items-center gap-2 text-foreground hover:text-primary">
-          <Link to="/chat-history">
-            <History className="w-4 h-4" />
-            View Chat History
-          </Link>
-        </Button>
-      </div>
+      </header>
       
       {/* Main Content */}
-      <div className="ml-10 mt-9 p-8 max-w-4xl">
+      <main className="container mx-auto px-6 py-8">
+        <div className="max-w-4xl mx-auto">
         {/* Messages Display */}
         <div className="bg-card/80 backdrop-blur-sm rounded-xl shadow-lg border-2 border-primary/20 p-6 mb-4 min-h-[400px] max-h-[500px] overflow-y-auto" 
              style={{ 
@@ -335,7 +358,8 @@ const ChatWithMe = () => {
             </div>
           </div>
         </div>
-      </div>
+        </div>
+      </main>
     </div>
   );
 };

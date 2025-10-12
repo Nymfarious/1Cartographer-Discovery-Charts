@@ -2,6 +2,8 @@ import { useEffect, useState, useRef } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
+import { ArrowLeft } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
 import EkkoClassicPanel from "./ekko/EkkoClassicPanel";
 import EkkoLabsPanel from "./ekko/EkkoLabsPanel";
 // Ekko v2 styles are loaded via index.html link
@@ -143,32 +145,41 @@ const Ekko = () => {
   const currentVoiceLabel = selectedVoice ? getVoiceLabel(selectedVoice) : "(no Google voice found)";
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Sidebar */}
-      <div 
-        className="fixed left-0 top-0 bottom-0 w-4 opacity-90 z-10"
-        style={{ backgroundColor: themeColor }}
-      />
+    <div className="min-h-screen" style={{ 
+      background: 'linear-gradient(135deg, hsl(var(--parchment)) 0%, hsl(var(--parchment-dark)) 100%)',
+      backgroundAttachment: 'fixed'
+    }}>
+      {/* Decorative border */}
+      <div className="fixed inset-0 pointer-events-none border-8 border-double opacity-30 z-50" 
+           style={{ borderColor: 'hsl(var(--brass))' }} />
       
-      {/* Header */}
-      <div 
-        className="w-full opacity-92 p-4 pl-12 text-foreground text-xl font-bold ml-4 flex items-center gap-3"
-        style={{ backgroundColor: themeColor }}
-      >
-        <Button variant="ghost" asChild className="mr-4">
-          <Link to="/" className="flex items-center gap-2 text-foreground hover:text-primary">
-            ← Dashboard
-          </Link>
-        </Button>
-        <span className="text-4xl">🎤</span>
-        Ekko Voice
-      </div>
+      {/* Header with consistent styling */}
+      <header className="sticky top-0 z-20 backdrop-blur-sm bg-card/95 border-b-2 border-[hsl(var(--brass))] shadow-lg">
+        <div className="container mx-auto px-6 py-4">
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="sm" asChild>
+              <Link to="/" className="flex items-center gap-2 hover:text-primary transition-colors">
+                <ArrowLeft className="h-4 w-4" />
+                <span>Dashboard</span>
+              </Link>
+            </Button>
+            <Separator orientation="vertical" className="h-6" />
+            <div className="flex items-center gap-2">
+              <span className="text-2xl">🎤</span>
+              <h1 className="text-2xl font-bold text-foreground" style={{ fontFamily: 'Georgia, serif' }}>
+                Cartographer Study - Ekko Voice
+              </h1>
+            </div>
+          </div>
+        </div>
+      </header>
       
       {/* Main Content */}
-      <div className="ml-10 mt-9 p-8">
-        <div className="text-2xl font-bold mb-6">
-          Hi {name}!
-        </div>
+      <main className="container mx-auto px-6 py-8">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-2xl font-bold mb-6 text-foreground">
+            Hi {name}!
+          </div>
 
 
 
@@ -183,9 +194,8 @@ const Ekko = () => {
             <EkkoLabsPanel />
           </div>
         </div>
-
-
-      </div>
+        </div>
+      </main>
     </div>
   );
 };

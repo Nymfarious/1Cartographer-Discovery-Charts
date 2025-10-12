@@ -4,7 +4,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { MessageSquare, Clock, Trash2, Copy, CheckCircle2, LogOut, Home, ArrowLeft } from "lucide-react";
+import { MessageSquare, Clock, Trash2, Copy, CheckCircle2, LogOut, Home, ArrowLeft, History } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 
 interface ChatHistoryItem {
@@ -81,46 +82,44 @@ const ChatHistory = () => {
       <div className="fixed inset-0 pointer-events-none border-8 border-double opacity-30 z-50" 
            style={{ borderColor: 'hsl(var(--brass))' }} />
       
-      {/* Header */}
-      <div className="relative border-b-2 border-[hsl(var(--brass))] shadow-lg"
-           style={{ 
-             background: 'linear-gradient(to bottom, hsl(var(--leather)), hsl(var(--brass)/0.3))',
-             boxShadow: '0 4px 12px rgba(0,0,0,0.3)'
-           }}>
-        <div className="px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" asChild size="sm"
-                    className="text-[hsl(var(--parchment))] hover:bg-white/10">
-              <Link to="/chat" className="flex items-center gap-2">
-                <ArrowLeft className="w-4 h-4" />
-                Back to Chat
-              </Link>
-            </Button>
-            <Button variant="ghost" asChild size="sm"
-                    className="text-[hsl(var(--parchment))] hover:bg-white/10">
-              <Link to="/" className="flex items-center gap-2">
-                <Home className="w-4 h-4" />
-                Dashboard
-              </Link>
-            </Button>
-            <div className="flex items-center gap-3">
-              <MessageSquare className="w-6 h-6 text-[hsl(var(--gold))]" />
-              <span className="text-xl font-bold text-[hsl(var(--parchment))]" 
-                    style={{ fontFamily: 'Georgia, serif' }}>
-                AI Conversation Archive
-              </span>
+      {/* Header with consistent styling */}
+      <header className="sticky top-0 z-20 backdrop-blur-sm bg-card/95 border-b-2 border-[hsl(var(--brass))] shadow-lg">
+        <div className="container mx-auto px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <Button variant="ghost" size="sm" asChild>
+                <Link to="/" className="flex items-center gap-2 hover:text-primary transition-colors">
+                  <ArrowLeft className="h-4 w-4" />
+                  <span>Dashboard</span>
+                </Link>
+              </Button>
+              <Separator orientation="vertical" className="h-6" />
+              <div className="flex items-center gap-2">
+                <History className="h-5 w-5 text-primary" />
+                <h1 className="text-2xl font-bold text-foreground" style={{ fontFamily: 'Georgia, serif' }}>
+                  AI Chat History
+                </h1>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" asChild className="border-[hsl(var(--brass))]">
+                <Link to="/chat" className="flex items-center gap-2">
+                  <MessageSquare className="w-4 h-4" />
+                  Back to Chat
+                </Link>
+              </Button>
+              <Button variant="ghost" size="sm" onClick={handleSignOut}>
+                <LogOut className="w-4 h-4 mr-2" />
+                Sign Out
+              </Button>
             </div>
           </div>
-          <Button variant="ghost" size="sm" onClick={handleSignOut}
-                  className="text-[hsl(var(--parchment))] hover:bg-white/10">
-            <LogOut className="w-4 h-4 mr-2" />
-            Sign Out
-          </Button>
         </div>
-      </div>
+      </header>
 
       {/* Main Content */}
-      <div className="p-6 md:p-8 max-w-7xl mx-auto">
+      <main className="container mx-auto px-6 py-8">
+        <div className="max-w-4xl mx-auto">
         <Card className="border-2 border-[hsl(var(--brass))] shadow-xl bg-[hsl(var(--card))]">
           <CardHeader className="border-b border-[hsl(var(--border))]">
             <CardTitle className="flex items-center gap-2 text-2xl" style={{ fontFamily: 'Georgia, serif' }}>
@@ -200,7 +199,8 @@ const ChatHistory = () => {
             )}
           </CardContent>
         </Card>
-      </div>
+        </div>
+      </main>
     </div>
   );
 };
