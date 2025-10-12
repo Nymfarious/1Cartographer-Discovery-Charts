@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Search, Loader2 } from "lucide-react";
 import PosterPicker from "@/components/PosterPicker";
 import HistoryViewer from "@/components/HistoryViewer";
+import ImageEditor from "@/components/ImageEditor";
 import { toast } from "sonner";
 
 type Hotspot = {
@@ -40,6 +41,7 @@ const Workspace = () => {
   const [dziUrl, setDziUrl] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState(posterId ? "viewer" : "library");
+  const [isImageEditor, setIsImageEditor] = useState(false);
 
   useEffect(() => {
     if (posterId && posterId !== poster?.id) {
@@ -81,6 +83,8 @@ const Workspace = () => {
         });
         setDziUrl(publicUrlData.publicUrl);
         setHotspots([]);
+        setIsImageEditor(true);
+        setActiveTab("imageview");
         setLoading(false);
         return;
       }
@@ -200,7 +204,7 @@ const Workspace = () => {
       {/* Main Content */}
       <div className="p-6 md:p-8 max-w-7xl mx-auto">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-2 mb-6 bg-[hsl(var(--card))] border-2 border-[hsl(var(--brass))]">
+          <TabsList className="grid w-full grid-cols-3 mb-6 bg-[hsl(var(--card))] border-2 border-[hsl(var(--brass))]">
             <TabsTrigger value="library" className="flex items-center gap-2 data-[state=active]:bg-[hsl(var(--gold))] data-[state=active]:text-[hsl(var(--leather))]">
               <Library className="w-4 h-4" />
               Map Library
@@ -208,6 +212,10 @@ const Workspace = () => {
             <TabsTrigger value="viewer" className="flex items-center gap-2 data-[state=active]:bg-[hsl(var(--gold))] data-[state=active]:text-[hsl(var(--leather))]">
               <MapPin className="w-4 h-4" />
               Map Viewer
+            </TabsTrigger>
+            <TabsTrigger value="imageview" className="flex items-center gap-2 data-[state=active]:bg-[hsl(var(--gold))] data-[state=active]:text-[hsl(var(--leather))]">
+              <MapPin className="w-4 h-4" />
+              Image View
             </TabsTrigger>
           </TabsList>
 
@@ -362,6 +370,38 @@ const Workspace = () => {
                   </Card>
                 </aside>
               </div>
+            )}
+          </TabsContent>
+
+          {/* Image View Tab */}
+          <TabsContent value="imageview">
+            {!poster ? (
+              <Card className="border-2 border-[hsl(var(--brass))] shadow-xl bg-[hsl(var(--card))] p-12">
+                <div className="text-center">
+                  <MapPin className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
+                  <p className="text-lg text-muted-foreground mb-4">No image selected</p>
+                  <Button onClick={() => setActiveTab("library")} variant="brass">
+                    Browse Library
+                  </Button>
+                </div>
+              </Card>
+            ) : (
+              <Card className="border-2 border-[hsl(var(--brass))] shadow-xl bg-[hsl(var(--card))]">
+                <CardHeader className="border-b border-[hsl(var(--border))]">
+                  <CardTitle className="flex items-center gap-2">
+                    <MapPin className="w-5 h-5 text-[hsl(var(--brass))]" />
+                    {poster.title}
+                  </CardTitle>
+                  {poster.credit && (
+                    <CardDescription>{poster.credit}</CardDescription>
+                  )}
+                </CardHeader>
+                <CardContent className="pt-6">
+                  {dziUrl && (
+                    <ImageEditor imageUrl={dziUrl} title={poster.title} />
+                  )}
+                </CardContent>
+              </Card>
             )}
           </TabsContent>
         </Tabs>
