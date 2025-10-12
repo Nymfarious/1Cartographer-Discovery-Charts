@@ -7,6 +7,7 @@ import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { User, Home, Shield, Upload } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { profileSchema } from "@/lib/validation";
 
 const Profile = () => {
   const [themeColor, setThemeColor] = useState<string>("#d4eaf7");
@@ -51,6 +52,23 @@ const Profile = () => {
   }, []);
 
   const saveProfile = async () => {
+    // Validate input
+    const validation = profileSchema.safeParse({
+      name: userName,
+      cityState: cityState,
+      secondaryEmail: secondaryEmail
+    });
+
+    if (!validation.success) {
+      const firstError = validation.error.errors[0];
+      toast({
+        title: "Validation Error",
+        description: firstError.message,
+        variant: "destructive",
+      });
+      return;
+    }
+
     localStorage.setItem("username", userName);
     localStorage.setItem("cityState", cityState);
     localStorage.setItem("secondaryEmail", secondaryEmail);

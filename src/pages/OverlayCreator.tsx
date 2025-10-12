@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Upload, Brain, Palette, Download, ExternalLink } from 'lucide-react';
+import { overlayCreatorSchema } from '@/lib/validation';
 
 interface HistorianResponse {
   summary: string[];
@@ -82,8 +83,18 @@ export default function OverlayCreator() {
   };
 
   const handleHistorianQuery = async () => {
-    if (!region || !baseYear || !compareYears || !question) {
-      toast({ title: 'Please fill all fields', variant: 'destructive' });
+    // Validate input
+    const validation = overlayCreatorSchema.safeParse({
+      region,
+      baseYear,
+      compareYears,
+      question,
+      theme: theme || 'default'
+    });
+
+    if (!validation.success) {
+      const firstError = validation.error.errors[0];
+      toast({ title: 'Validation Error', description: firstError.message, variant: 'destructive' });
       return;
     }
     

@@ -1,10 +1,10 @@
 project_id = "grtxyrucfjucmqebjavi"
 
 [functions.historian-qa]
-verify_jwt = false
+verify_jwt = true
 
 [functions.overlay-artist]
-verify_jwt = false
+verify_jwt = true
 
 [functions.text-to-speech]
-verify_jwt = false
+verify_jwt = true

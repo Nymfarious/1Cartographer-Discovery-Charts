@@ -8,6 +8,7 @@ import { Separator } from "@/components/ui/separator";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { chatPromptSchema } from "@/lib/validation";
 
 const ChatWithMe = () => {
   const [themeColor, setThemeColor] = useState<string>("#d4eaf7");
@@ -35,6 +36,18 @@ const ChatWithMe = () => {
   const sendMessage = async () => {
     if (!prompt.trim() || isLoading) return;
 
+    // Validate input
+    const validation = chatPromptSchema.safeParse({ prompt });
+    if (!validation.success) {
+      const firstError = validation.error.errors[0];
+      toast({
+        title: "Invalid Input",
+        description: firstError.message,
+        variant: "destructive",
+      });
+      return;
+    }
+
     const userMessage = prompt.trim();
     setPrompt("");
     setMessages(prev => [...prev, { role: "user", content: userMessage }]);
@@ -60,7 +73,6 @@ const ChatWithMe = () => {
         });
       }
     } catch (error) {
-      console.error('Error:', error);
       toast({
         title: "Error",
         description: "Failed to get response from historian",
