@@ -1,4 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.75.0";
+import { checkRateLimit, logRequest } from '../_shared/rateLimit.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -13,6 +15,37 @@ serve(async (req) => {
   try {
     const { historianData, theme, year } = await req.json();
     console.log('Overlay Artist request:', { theme, year });
+
+    // Initialize Supabase client and verify authentication
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+    const authHeader = req.headers.get('Authorization');
+    const supabase = createClient(supabaseUrl, supabaseKey, {
+      global: { headers: { Authorization: authHeader || '' } }
+    });
+
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Check rate limit
+    const rateCheck = await checkRateLimit(user.id, 'overlay-artist', supabase);
+    if (!rateCheck.allowed) {
+      return new Response(JSON.stringify({
+        error: 'Rate limit exceeded. Please try again later.',
+        remaining: 0
+      }), {
+        status: 429,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Log this request
+    await logRequest(user.id, 'overlay-artist', supabase);
 
     // Get Lovable API key
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
@@ -71,9 +104,8 @@ Create drawing instructions for a transparent overlay showing ${theme} for year 
     });
 
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error('AI gateway error:', response.status, errorText);
-      throw new Error(`AI gateway error: ${response.status}`);
+      console.error('[OVERLAY-ARTIST] AI gateway error:', response.status);
+      throw new Error('AI gateway error');
     }
 
     const data = await response.json();
@@ -98,9 +130,9 @@ Create drawing instructions for a transparent overlay showing ${theme} for year 
     });
 
   } catch (error) {
-    console.error('Error in overlay-artist:', error);
+    console.error('[OVERLAY-ARTIST] Error:', error instanceof Error ? error.name : 'Unknown');
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }),
+      JSON.stringify({ error: 'Unable to generate overlay design. Please try again.' }),
       {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

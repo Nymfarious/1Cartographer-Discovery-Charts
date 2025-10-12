@@ -213,6 +213,30 @@ export type Database = {
         }
         Relationships: []
       }
+      request_logs: {
+        Row: {
+          created_at: string | null
+          endpoint: string
+          id: string
+          response_time_ms: number | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          endpoint: string
+          id?: string
+          response_time_ms?: number | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          endpoint?: string
+          id?: string
+          response_time_ms?: number | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       trusted_sources: {
         Row: {
           created_at: string

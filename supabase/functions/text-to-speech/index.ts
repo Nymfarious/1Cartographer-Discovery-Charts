@@ -1,4 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.75.0";
+import { checkRateLimit, logRequest } from '../_shared/rateLimit.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -13,12 +15,43 @@ serve(async (req) => {
   try {
     const { text, voiceId, modelId = 'eleven_multilingual_v2' } = await req.json();
     
+    // Initialize Supabase client and verify authentication
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+    const authHeader = req.headers.get('Authorization');
+    const supabase = createClient(supabaseUrl, supabaseKey, {
+      global: { headers: { Authorization: authHeader || '' } }
+    });
+
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Check rate limit
+    const rateCheck = await checkRateLimit(user.id, 'text-to-speech', supabase);
+    if (!rateCheck.allowed) {
+      return new Response(JSON.stringify({
+        error: 'Rate limit exceeded. Please try again later.',
+        remaining: 0
+      }), {
+        status: 429,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Log this request
+    await logRequest(user.id, 'text-to-speech', supabase);
+    
     const apiKey = Deno.env.get('ELEVENLABS_API_KEY');
 
     if (!apiKey) {
-      console.error('ELEVENLABS_API_KEY not configured in backend secrets');
+      console.error('[TEXT-TO-SPEECH] ElevenLabs API key not configured');
       return new Response(
-        JSON.stringify({ error: 'ElevenLabs API key not configured. Contact administrator.' }),
+        JSON.stringify({ error: 'Speech service not configured. Contact administrator.' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -30,7 +63,7 @@ serve(async (req) => {
       );
     }
 
-    console.log(`Converting text to speech with voice ${voiceId} using backend API key`);
+    console.log(`[TEXT-TO-SPEECH] Converting text with voice ${voiceId}`);
 
     const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
       method: 'POST',
@@ -51,11 +84,10 @@ serve(async (req) => {
     });
 
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error('ElevenLabs API error:', response.status, errorText);
+      console.error('[TEXT-TO-SPEECH] ElevenLabs API error:', response.status);
       return new Response(
-        JSON.stringify({ error: 'Failed to generate audio', details: errorText }),
-        { status: response.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: 'Failed to generate audio. Please try again.' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -68,9 +100,9 @@ serve(async (req) => {
       },
     });
   } catch (error) {
-    console.error('Error in text-to-speech function:', error);
+    console.error('[TEXT-TO-SPEECH] Error:', error instanceof Error ? error.name : 'Unknown');
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }),
+      JSON.stringify({ error: 'Unable to generate speech. Please try again.' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }

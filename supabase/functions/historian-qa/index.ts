@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.75.0";
+import { checkRateLimit, logRequest } from '../_shared/rateLimit.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -14,6 +15,37 @@ serve(async (req) => {
   try {
     const { region, baseYear, compareYears, question } = await req.json();
     console.log('Historian Q&A request:', { region, baseYear, compareYears, question });
+    
+    // Initialize Supabase client and verify authentication
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+    const authHeader = req.headers.get('Authorization');
+    const supabase = createClient(supabaseUrl, supabaseKey, {
+      global: { headers: { Authorization: authHeader || '' } }
+    });
+
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Check rate limit
+    const rateCheck = await checkRateLimit(user.id, 'historian-qa', supabase);
+    if (!rateCheck.allowed) {
+      return new Response(JSON.stringify({
+        error: 'Rate limit exceeded. Please try again later.',
+        remaining: 0
+      }), {
+        status: 429,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Log this request
+    await logRequest(user.id, 'historian-qa', supabase);
     
     // Handle simple question-only mode for chat interface
     if (question && !region && !baseYear) {
@@ -59,11 +91,6 @@ serve(async (req) => {
     if (!LOVABLE_API_KEY) {
       throw new Error('LOVABLE_API_KEY not configured');
     }
-
-    // Initialize Supabase client to fetch trusted sources
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
 
     // Fetch trusted sources
     const { data: trustedSources, error: sourcesError } = await supabase
@@ -147,9 +174,9 @@ Provide 3-5 key changes with geometry hints for overlay creation.`;
     });
 
   } catch (error) {
-    console.error('Error in historian-qa:', error);
+    console.error('[HISTORIAN] Error:', error instanceof Error ? error.name : 'Unknown');
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }),
+      JSON.stringify({ error: 'Unable to process historical query. Please try again.' }),
       {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
