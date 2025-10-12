@@ -56,7 +56,6 @@ const Preferences = () => {
   const [emails, setEmails] = useState<string[]>([]);
   const [selectedEmails, setSelectedEmails] = useState<string[]>([]);
   const [newEmail, setNewEmail] = useState<string>("");
-  const [elevenLabsApiKey, setElevenLabsApiKey] = useState<string>("");
   const [selectedVoiceId, setSelectedVoiceId] = useState<string>("");
   const [voiceProvider, setVoiceProvider] = useState<'browser' | 'elevenlabs'>('browser');
   const [userName, setUserName] = useState<string>("");
@@ -83,7 +82,6 @@ const Preferences = () => {
     const savedEmails = JSON.parse(localStorage.getItem("userEmails") || "[]");
     setEmails(savedEmails);
     setSelectedEmails(savedEmails.slice(0, 1)); // Default to first email selected
-    setElevenLabsApiKey(localStorage.getItem("elevenLabsApiKey") || "");
     setSelectedVoiceId(localStorage.getItem("selectedVoiceId") || "");
     setVoiceProvider(localStorage.getItem("voiceProvider") as 'browser' | 'elevenlabs' || 'browser');
     setUserName(localStorage.getItem("username") || "");
@@ -105,7 +103,6 @@ const Preferences = () => {
 
   const savePreferences = () => {
     localStorage.setItem("favcolor", themeColor);
-    localStorage.setItem("elevenLabsApiKey", elevenLabsApiKey);
     localStorage.setItem("selectedVoiceId", selectedVoiceId);
     localStorage.setItem("voiceProvider", voiceProvider);
     localStorage.setItem("userEmails", JSON.stringify(emails));
@@ -121,7 +118,6 @@ const Preferences = () => {
   const resetPreferences = () => {
     if (confirm("Reset ALL preferences?")) {
       localStorage.removeItem("favcolor");
-      localStorage.removeItem("elevenLabsApiKey");
       localStorage.removeItem("selectedVoiceId");
       localStorage.removeItem("voiceProvider");
       localStorage.removeItem("userEmails");
@@ -130,7 +126,6 @@ const Preferences = () => {
       setEmails([]);
       setSelectedEmails([]);
       setNewEmail("");
-      setElevenLabsApiKey("");
       setSelectedVoiceId("");
       setVoiceProvider('browser');
       const defaultColor = "#d4eaf7";
@@ -206,8 +201,7 @@ const Preferences = () => {
           body: { 
             text: testText,
             voiceId: selectedVoiceId,
-            modelId: 'eleven_multilingual_v2',
-            apiKey: elevenLabsApiKey || undefined // Send localStorage key if present
+            modelId: 'eleven_multilingual_v2'
           }
         });
 
@@ -371,31 +365,9 @@ const Preferences = () => {
               </SelectContent>
             </Select>
             <p className="text-sm text-muted-foreground mt-1">
-              Browser voices are completely free. Eleven Labs voices may require Admin access - Changes Pending.
+              Browser voices are completely free. ElevenLabs voices use secure backend configuration.
             </p>
           </div>
-
-          {/* ElevenLabs API Key (only shown when ElevenLabs voice selected) */}
-          {voiceProvider === 'elevenlabs' && (
-            <div>
-              <Label htmlFor="elevenLabsApiKey" className="font-semibold">ElevenLabs API Key:</Label>
-              <Input 
-                id="elevenLabsApiKey"
-                type="password"
-                value={elevenLabsApiKey}
-                onChange={(e) => setElevenLabsApiKey(e.target.value)}
-                placeholder="Enter your ElevenLabs API key"
-                className="mt-1"
-              />
-              <p className="text-sm text-muted-foreground mt-1">
-                Optional: Get your API key from{" "}
-                <a href="https://elevenlabs.io" target="_blank" rel="noopener noreferrer" className="text-primary underline">
-                  ElevenLabs
-                </a>{" "}
-                (Free tier: 10,000 characters per month). If not provided, backend secret will be used.
-              </p>
-            </div>
-          )}
 
           {/* Voice Test Controls */}
           <div className="flex items-center gap-2">
