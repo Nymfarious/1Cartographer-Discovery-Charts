@@ -10,6 +10,7 @@ import { Search, Loader2 } from "lucide-react";
 import PosterPicker from "@/components/PosterPicker";
 import HistoryViewer from "@/components/HistoryViewer";
 import ImageEditor from "@/components/ImageEditor";
+import HDAdmin from "@/pages/HDAdmin";
 import { toast } from "sonner";
 
 type Hotspot = {
@@ -232,7 +233,20 @@ const Workspace = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent className="pt-6">
-                <PosterPicker onOpen={handleOpenPoster} />
+                <Tabs defaultValue="browse" className="w-full">
+                  <TabsList className="grid w-full grid-cols-2 mb-4">
+                    <TabsTrigger value="browse">Browse Collection</TabsTrigger>
+                    <TabsTrigger value="upload">Upload Maps</TabsTrigger>
+                  </TabsList>
+                  
+                  <TabsContent value="browse">
+                    <PosterPicker onOpen={handleOpenPoster} />
+                  </TabsContent>
+                  
+                  <TabsContent value="upload">
+                    <HDAdmin />
+                  </TabsContent>
+                </Tabs>
               </CardContent>
             </Card>
           </TabsContent>
