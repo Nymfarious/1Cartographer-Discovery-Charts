@@ -60,30 +60,89 @@ const Workspace = () => {
   async function loadPoster(id: string) {
     setLoading(true);
     try {
+      // Try base_maps first
+      const { data: baseMapData, error: baseMapError } = await supabase
+        .from('base_maps')
+        .select('*')
+        .eq('id', id)
+        .maybeSingle();
+
+      if (baseMapData) {
+        const { data: publicUrlData } = supabase.storage
+          .from('tiles')
+          .getPublicUrl(baseMapData.file_path);
+
+        setPoster({
+          id: baseMapData.id,
+          title: baseMapData.title || 'Untitled',
+          credit: baseMapData.attribution,
+          license_status: baseMapData.license || 'open',
+          dzi_path: baseMapData.file_path
+        });
+        setDziUrl(publicUrlData.publicUrl);
+        setHotspots([]);
+        setLoading(false);
+        return;
+      }
+
+      // Try overlays
+      const { data: overlayData, error: overlayError } = await supabase
+        .from('overlays')
+        .select('*')
+        .eq('id', id)
+        .maybeSingle();
+
+      if (overlayData) {
+        const { data: publicUrlData } = supabase.storage
+          .from('tiles')
+          .getPublicUrl(overlayData.file_path);
+
+        setPoster({
+          id: overlayData.id,
+          title: `${overlayData.theme} (${overlayData.year})`,
+          credit: overlayData.notes,
+          license_status: 'open',
+          dzi_path: overlayData.file_path
+        });
+        setDziUrl(publicUrlData.publicUrl);
+        setHotspots([]);
+        setLoading(false);
+        return;
+      }
+
+      // Fallback to posters table (legacy)
       const { data: posterData, error: posterError } = await supabase
         .from('posters')
         .select('*')
         .eq('id', id)
-        .single();
+        .maybeSingle();
 
-      if (posterError) throw posterError;
+      if (posterError || !posterData) {
+        throw new Error('Poster not found');
+      }
+
       setPoster(posterData);
-
-      const { data: hotspotsData, error: hotspotsError } = await supabase
+      
+      const { data: hotspotsData } = await supabase
         .from('hotspots')
         .select('*')
         .eq('poster_id', id);
 
-      if (hotspotsError) throw hotspotsError;
       setHotspots(hotspotsData || []);
 
-      const { data: signedData, error: signedError } = await supabase.functions.invoke(
-        'getSignedTile',
-        { body: { path: posterData.dzi_path } }
-      );
-
-      if (signedError) throw signedError;
-      setDziUrl(signedData.url);
+      // Try to get signed URL for DZI
+      try {
+        const { data: signedData } = await supabase.functions.invoke(
+          'getSignedTile',
+          { body: { path: posterData.dzi_path } }
+        );
+        if (signedData?.url) {
+          setDziUrl(signedData.url);
+        }
+      } catch {
+        // If DZI doesn't exist, show message
+        toast.error('Map tiles not available for this poster');
+      }
     } catch (error: any) {
       console.error('Error loading poster:', error);
       toast.error(error.message || 'Failed to load poster');
@@ -222,12 +281,23 @@ const Workspace = () => {
                       
                       {/* Viewer */}
                       {dziUrl && (
-                        <div className="rounded-lg overflow-hidden border border-[hsl(var(--border))]">
-                          <HistoryViewer 
-                            dziUrl={dziUrl} 
-                            hotspots={filteredHotspots} 
-                            focus={filteredHotspots[0]} 
-                          />
+                        <div className="rounded-lg overflow-hidden border border-[hsl(var(--border))] bg-[hsl(var(--muted))]">
+                          {dziUrl.endsWith('.dzi') ? (
+                            <HistoryViewer 
+                              dziUrl={dziUrl} 
+                              hotspots={filteredHotspots} 
+                              focus={filteredHotspots[0]} 
+                            />
+                          ) : (
+                            <div className="relative w-full" style={{ minHeight: '70vh' }}>
+                              <img 
+                                src={dziUrl} 
+                                alt={poster.title}
+                                className="w-full h-auto object-contain"
+                                style={{ maxHeight: '70vh' }}
+                              />
+                            </div>
+                          )}
                         </div>
                       )}
                     </CardContent>
