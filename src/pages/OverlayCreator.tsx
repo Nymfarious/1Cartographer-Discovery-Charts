@@ -1,402 +1,138 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useToast } from '@/hooks/use-toast';
-import { Loader2, Upload, Brain, Palette, Download, ExternalLink } from 'lucide-react';
-import { overlayCreatorSchema } from '@/lib/validation';
+import { useState, useRef, useEffect } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { Canvas as FabricCanvas, PencilBrush, Rect, Circle, Line, IText, Path } from "fabric";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Slider } from "@/components/ui/slider";
+import { Badge } from "@/components/ui/badge";
+import { supabase } from "@/integrations/supabase/client";
+import { Home, Pencil, Square, CircleIcon, Minus, Type, ArrowRight, Save, Trash2, Download, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
-interface HistorianResponse {
-  summary: string[];
-  regions_changed: string[];
-  geometry_hints: string[];
-  citations: string[];
-}
-
-interface OverlayArtistResponse {
-  drawing_instructions: string[];
-  color_suggestions: Record<string, string>;
-  opacity_levels: Record<string, number>;
-  layer_order: string[];
-}
+type DrawTool = 'select' | 'pencil' | 'rectangle' | 'circle' | 'line' | 'text' | 'arrow';
 
 export default function OverlayCreator() {
   const navigate = useNavigate();
-  const { toast } = useToast();
+  const [searchParams] = useSearchParams();
+  const baseMapId = searchParams.get('baseMapId');
+
+  const [baseMap, setBaseMap] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   
-  const [baseMapFile, setBaseMapFile] = useState<File | null>(null);
-  const [uploading, setUploading] = useState(false);
-  const [baseMapId, setBaseMapId] = useState<string>('');
-  
-  const [region, setRegion] = useState('');
-  const [baseYear, setBaseYear] = useState('');
-  const [compareYears, setCompareYears] = useState('');
-  const [question, setQuestion] = useState('');
-  
-  const [historianLoading, setHistorianLoading] = useState(false);
-  const [historianData, setHistorianData] = useState<HistorianResponse | null>(null);
-  
-  const [overlayLoading, setOverlayLoading] = useState(false);
-  const [overlayData, setOverlayData] = useState<OverlayArtistResponse | null>(null);
+  const [fabricCanvas, setFabricCanvas] = useState<FabricCanvas | null>(null);
+  const [activeTool, setActiveTool] = useState<DrawTool>('select');
+  const [strokeColor, setStrokeColor] = useState('#FF0000');
+  const [fillColor, setFillColor] = useState('transparent');
+  const [strokeWidth, setStrokeWidth] = useState(3);
   
   const [theme, setTheme] = useState('');
+  const [year, setYear] = useState<number>(new Date().getFullYear());
+  const [title, setTitle] = useState('');
+  const [notes, setNotes] = useState('');
 
-  const handleFileUpload = async () => {
-    if (!baseMapFile) return;
-    
-    setUploading(true);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    if (!baseMapId) {
+      toast.error('No base map selected');
+      navigate('/workspace');
+      return;
+    }
+    loadBaseMap();
+  }, [baseMapId]);
+
+  useEffect(() => {
+    if (baseMap && canvasRef.current && !fabricCanvas) {
+      initializeFabricCanvas();
+    }
+  }, [baseMap]);
+
+  useEffect(() => {
+    if (!fabricCanvas) return;
+    fabricCanvas.isDrawingMode = activeTool === 'pencil';
+    if (activeTool === 'pencil' && fabricCanvas.freeDrawingBrush) {
+      fabricCanvas.freeDrawingBrush.color = strokeColor;
+      fabricCanvas.freeDrawingBrush.width = strokeWidth;
+    }
+  }, [activeTool, strokeColor, strokeWidth, fabricCanvas]);
+
+  async function loadBaseMap() {
+    setLoading(true);
     try {
-      const fileExt = baseMapFile.name.split('.').pop();
-      const fileName = `${Date.now()}.${fileExt}`;
-      const filePath = `base_maps/${fileName}`;
-      
-      const { error: uploadError } = await supabase.storage
-        .from('base_maps')
-        .upload(filePath, baseMapFile);
-      
+      const { data, error } = await supabase.from('base_maps').select('*').eq('id', baseMapId).maybeSingle();
+      if (error) throw error;
+      if (!data) throw new Error('Base map not found');
+      setBaseMap(data);
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to load base map');
+      navigate('/workspace');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function initializeFabricCanvas() {
+    if (!canvasRef.current || !baseMap) return;
+    const width = baseMap.canonical_width || 2560;
+    const height = baseMap.canonical_height || 1440;
+    const canvas = new FabricCanvas(canvasRef.current, { width, height, backgroundColor: 'transparent' });
+    canvas.freeDrawingBrush = new PencilBrush(canvas);
+    setFabricCanvas(canvas);
+  }
+
+  function handleToolClick(tool: DrawTool) {
+    setActiveTool(tool);
+    if (!fabricCanvas) return;
+    if (tool === 'rectangle') fabricCanvas.add(new Rect({ left: 100, top: 100, width: 200, height: 150, fill: fillColor === 'transparent' ? 'rgba(0,0,0,0)' : fillColor, stroke: strokeColor, strokeWidth }));
+    else if (tool === 'circle') fabricCanvas.add(new Circle({ left: 100, top: 100, radius: 75, fill: fillColor === 'transparent' ? 'rgba(0,0,0,0)' : fillColor, stroke: strokeColor, strokeWidth }));
+    else if (tool === 'line') fabricCanvas.add(new Line([50, 50, 200, 50], { stroke: strokeColor, strokeWidth }));
+    else if (tool === 'text') fabricCanvas.add(new IText('Click to edit', { left: 100, top: 100, fill: strokeColor, fontSize: 24 }));
+    else if (tool === 'arrow') fabricCanvas.add(new Path('M 0 0 L 150 0 L 140 -10 M 150 0 L 140 10', { left: 100, top: 100, stroke: strokeColor, strokeWidth, fill: '' }));
+  }
+
+  async function handleSave() {
+    if (!fabricCanvas || !baseMap || !theme || !year || !title) { toast.error('Please fill in theme, year, and title'); return; }
+    setSaving(true);
+    try {
+      const svg = fabricCanvas.toSVG();
+      const dataUrl = fabricCanvas.toDataURL({ format: 'png', quality: 1, multiplier: 1 });
+      const response = await fetch(dataUrl);
+      const blob = await response.blob();
+      const fileName = `${theme.toLowerCase().replace(/\s+/g, '_')}_${year}_${Date.now()}.png`;
+      const filePath = `overlays/${baseMapId}/${fileName}`;
+      const { error: uploadError } = await supabase.storage.from('overlays').upload(filePath, blob, { contentType: 'image/png' });
       if (uploadError) throw uploadError;
-      
-      const { data: mapData, error: insertError } = await supabase
-        .from('base_maps')
-        .insert({
-          title: baseMapFile.name,
-          region: region || 'Unknown',
-          file_path: filePath,
-        })
-        .select()
-        .single();
-      
-      if (insertError) throw insertError;
-      
-      setBaseMapId(mapData.id);
-      toast({ title: 'Base map uploaded successfully!' });
+      const { data: maxZData } = await supabase.from('overlays').select('z_index').eq('base_map_id', baseMapId).order('z_index', { ascending: false }).limit(1).maybeSingle();
+      const nextZIndex = (maxZData?.z_index || -1) + 1;
+      const { error: dbError } = await supabase.from('overlays').insert({ base_map_id: baseMapId, theme, year, file_path: filePath, z_index: nextZIndex, width_px: baseMap.canonical_width, height_px: baseMap.canonical_height, format: 'png', notes: `${notes}\n\n--- SVG Source ---\n${svg}` });
+      if (dbError) throw dbError;
+      toast.success('Overlay saved successfully');
+      navigate(`/workspace?poster=${baseMapId}`);
     } catch (error: any) {
-      toast({ title: 'Upload failed', description: error.message, variant: 'destructive' });
+      toast.error(error.message || 'Failed to save overlay');
     } finally {
-      setUploading(false);
+      setSaving(false);
     }
-  };
+  }
 
-  const handleHistorianQuery = async () => {
-    // Validate input
-    const validation = overlayCreatorSchema.safeParse({
-      region,
-      baseYear,
-      compareYears,
-      question,
-      theme: theme || 'default'
-    });
-
-    if (!validation.success) {
-      const firstError = validation.error.errors[0];
-      toast({ title: 'Validation Error', description: firstError.message, variant: 'destructive' });
-      return;
-    }
-    
-    setHistorianLoading(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('historian-qa', {
-        body: {
-          region,
-          baseYear: parseInt(baseYear),
-          compareYears: compareYears.split(',').map(y => parseInt(y.trim())),
-          question,
-        },
-      });
-      
-      if (error) throw error;
-      setHistorianData(data);
-      toast({ title: 'Historical analysis complete!' });
-    } catch (error: any) {
-      toast({ title: 'Historian query failed', description: error.message, variant: 'destructive' });
-    } finally {
-      setHistorianLoading(false);
-    }
-  };
-
-  const handleGenerateOverlay = async () => {
-    if (!historianData || !theme) {
-      toast({ title: 'Please complete historian query first', variant: 'destructive' });
-      return;
-    }
-    
-    setOverlayLoading(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('overlay-artist', {
-        body: {
-          historianData,
-          theme,
-          year: parseInt(baseYear),
-        },
-      });
-      
-      if (error) throw error;
-      setOverlayData(data);
-      
-      // Save overlay metadata to database
-      if (baseMapId) {
-        await supabase.from('overlays').insert({
-          base_map_id: baseMapId,
-          theme,
-          year: parseInt(baseYear),
-          file_path: 'pending', // Will be updated when actual image is created
-          notes: JSON.stringify(data),
-        });
-      }
-      
-      toast({ title: 'Overlay design generated!' });
-    } catch (error: any) {
-      toast({ title: 'Overlay generation failed', description: error.message, variant: 'destructive' });
-    } finally {
-      setOverlayLoading(false);
-    }
-  };
-
-  const exportToCanva = () => {
-    if (!overlayData) return;
-    
-    // Create a Canva deep link with overlay instructions
-    const instructions = encodeURIComponent(
-      `Historical Overlay for ${theme} (${baseYear})\n\n` +
-      `Instructions:\n${overlayData.drawing_instructions.join('\n')}\n\n` +
-      `Colors:\n${Object.entries(overlayData.color_suggestions).map(([k, v]) => `${k}: ${v}`).join('\n')}\n\n` +
-      `Layer Order: ${overlayData.layer_order.join(' → ')}`
-    );
-    
-    // Open Canva with a new design (transparent background)
-    window.open(`https://www.canva.com/create?instructions=${instructions}`, '_blank');
-  };
-
-  const downloadInstructions = () => {
-    if (!overlayData) return;
-    
-    const content = {
-      historian_analysis: historianData,
-      overlay_design: overlayData,
-      metadata: { region, baseYear, theme },
-    };
-    
-    const blob = new Blob([JSON.stringify(content, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `overlay-${theme}-${baseYear}.json`;
-    a.click();
-  };
+  if (loading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin" /></div>;
 
   return (
-    <div className="min-h-screen bg-background p-8">
-      <div className="max-w-6xl mx-auto space-y-8">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-4xl font-bold">Overlay Creator</h1>
-            <p className="text-muted-foreground mt-2">Dual-agent historical overlay generation</p>
-          </div>
-          <Button variant="outline" onClick={() => navigate('/')}>
-            Back to Gallery
-          </Button>
+    <div className="min-h-screen p-6">
+      <Button onClick={() => navigate('/workspace')} className="mb-4"><Home className="w-4 h-4 mr-2" />Back</Button>
+      <div className="grid gap-6 lg:grid-cols-[300px_1fr] max-w-7xl mx-auto">
+        <div className="space-y-4">
+          <Card><CardHeader><CardTitle>Tools</CardTitle></CardHeader><CardContent className="space-y-2">{['select', 'pencil', 'line', 'rectangle', 'circle', 'text', 'arrow'].map(t => <Button key={t} variant={activeTool === t ? 'default' : 'outline'} onClick={() => t === 'select' ? setActiveTool('select') : handleToolClick(t as DrawTool)} className="w-full justify-start">{t}</Button>)}</CardContent></Card>
+          <Card><CardHeader><CardTitle>Style</CardTitle></CardHeader><CardContent className="space-y-3"><div><Label>Stroke</Label><Input type="color" value={strokeColor} onChange={(e) => setStrokeColor(e.target.value)} /></div><div><Label>Fill</Label><Input type="color" value={fillColor === 'transparent' ? '#000000' : fillColor} onChange={(e) => setFillColor(e.target.value)} /><Button variant="ghost" size="sm" onClick={() => setFillColor('transparent')} className="w-full">Transparent</Button></div><div><Label>Width: {strokeWidth}px</Label><Slider value={[strokeWidth]} onValueChange={(v) => setStrokeWidth(v[0])} min={1} max={20} /></div></CardContent></Card>
+          <Card><CardHeader><CardTitle>Info</CardTitle></CardHeader><CardContent className="space-y-3"><Select value={theme} onValueChange={setTheme}><SelectTrigger><SelectValue placeholder="Theme" /></SelectTrigger><SelectContent>{['Boundaries', 'Routes', 'Battles', 'Trade', 'Cities', 'Annotations'].map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent></Select><Input type="number" value={year} onChange={(e) => setYear(parseInt(e.target.value))} placeholder="Year" /><Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Title" /><Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Notes" rows={3} /></CardContent></Card>
+          <Button onClick={handleSave} disabled={saving} className="w-full"><Save className="w-4 h-4 mr-2" />{saving ? 'Saving...' : 'Save'}</Button>
         </div>
-
-        {/* Step 1: Upload Base Map */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Upload className="w-5 h-5" />
-              Step 1: Upload Base Map
-            </CardTitle>
-            <CardDescription>Upload the historical map you want to overlay</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <Label htmlFor="region">Region</Label>
-              <Input
-                id="region"
-                value={region}
-                onChange={(e) => setRegion(e.target.value)}
-                placeholder="e.g., France, Europe, Asia"
-              />
-            </div>
-            <div>
-              <Label htmlFor="file">Base Map Image</Label>
-              <Input
-                id="file"
-                type="file"
-                accept="image/*"
-                onChange={(e) => setBaseMapFile(e.target.files?.[0] || null)}
-              />
-            </div>
-            <Button onClick={handleFileUpload} disabled={!baseMapFile || uploading}>
-              {uploading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              Upload Base Map
-            </Button>
-          </CardContent>
-        </Card>
-
-        {/* Step 2: Historian Q&A */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Brain className="w-5 h-5" />
-              Step 2: Historian Q&A Agent
-            </CardTitle>
-            <CardDescription>Ask about historical changes and geography</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="baseYear">Base Year</Label>
-                <Input
-                  id="baseYear"
-                  value={baseYear}
-                  onChange={(e) => setBaseYear(e.target.value)}
-                  placeholder="e.g., 1789"
-                />
-              </div>
-              <div>
-                <Label htmlFor="compareYears">Compare Years (comma-separated)</Label>
-                <Input
-                  id="compareYears"
-                  value={compareYears}
-                  onChange={(e) => setCompareYears(e.target.value)}
-                  placeholder="e.g., 1815, 1848, 1871"
-                />
-              </div>
-            </div>
-            <div>
-              <Label htmlFor="question">Historical Question</Label>
-              <Textarea
-                id="question"
-                value={question}
-                onChange={(e) => setQuestion(e.target.value)}
-                placeholder="What were the territorial changes in France between these periods?"
-                rows={3}
-              />
-            </div>
-            <Button onClick={handleHistorianQuery} disabled={historianLoading}>
-              {historianLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              Query Historian
-            </Button>
-            
-            {historianData && (
-              <div className="mt-4 p-4 bg-muted rounded-lg space-y-3">
-                <div>
-                  <h4 className="font-semibold mb-2">Summary:</h4>
-                  <ul className="list-disc list-inside space-y-1">
-                    {historianData.summary.map((item, i) => (
-                      <li key={i} className="text-sm">{item}</li>
-                    ))}
-                  </ul>
-                </div>
-                <div>
-                  <h4 className="font-semibold mb-2">Regions Changed:</h4>
-                  <p className="text-sm">{historianData.regions_changed.join(', ')}</p>
-                </div>
-                <div>
-                  <h4 className="font-semibold mb-2">Geometry Hints:</h4>
-                  <ul className="list-disc list-inside space-y-1">
-                    {historianData.geometry_hints.map((hint, i) => (
-                      <li key={i} className="text-sm">{hint}</li>
-                    ))}
-                  </ul>
-                </div>
-                {historianData.citations.length > 0 && (
-                  <div>
-                    <h4 className="font-semibold mb-2">Sources:</h4>
-                    <p className="text-sm text-muted-foreground">{historianData.citations.join(', ')}</p>
-                  </div>
-                )}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Step 3: Overlay Artist */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Palette className="w-5 h-5" />
-              Step 3: Overlay Artist Agent
-            </CardTitle>
-            <CardDescription>Generate visual overlay instructions</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <Label htmlFor="theme">Overlay Theme</Label>
-              <Input
-                id="theme"
-                value={theme}
-                onChange={(e) => setTheme(e.target.value)}
-                placeholder="e.g., Territorial Changes, Political Boundaries, Trade Routes"
-              />
-            </div>
-            <Button 
-              onClick={handleGenerateOverlay} 
-              disabled={!historianData || overlayLoading}
-            >
-              {overlayLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              Generate Overlay Design
-            </Button>
-            
-            {overlayData && (
-              <div className="mt-4 p-4 bg-muted rounded-lg space-y-3">
-                <div>
-                  <h4 className="font-semibold mb-2">Drawing Instructions:</h4>
-                  <ol className="list-decimal list-inside space-y-1">
-                    {overlayData.drawing_instructions.map((inst, i) => (
-                      <li key={i} className="text-sm">{inst}</li>
-                    ))}
-                  </ol>
-                </div>
-                <div>
-                  <h4 className="font-semibold mb-2">Color Palette:</h4>
-                  <div className="flex gap-3 flex-wrap">
-                    {Object.entries(overlayData.color_suggestions).map(([name, color]) => (
-                      <div key={name} className="flex items-center gap-2">
-                        <div 
-                          className="w-8 h-8 rounded border"
-                          style={{ backgroundColor: color }}
-                        />
-                        <span className="text-sm">{name}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                <div>
-                  <h4 className="font-semibold mb-2">Layer Order:</h4>
-                  <p className="text-sm">{overlayData.layer_order.join(' → ')}</p>
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Step 4: Export */}
-        {overlayData && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Download className="w-5 h-5" />
-                Step 4: Export Overlay
-              </CardTitle>
-              <CardDescription>Export your overlay design to Canva or download instructions</CardDescription>
-            </CardHeader>
-            <CardContent className="flex gap-4">
-              <Button onClick={exportToCanva} className="flex items-center gap-2">
-                <ExternalLink className="w-4 h-4" />
-                Open in Canva
-              </Button>
-              <Button onClick={downloadInstructions} variant="outline" className="flex items-center gap-2">
-                <Download className="w-4 h-4" />
-                Download Instructions (JSON)
-              </Button>
-            </CardContent>
-          </Card>
-        )}
+        <Card><CardHeader><CardTitle>Canvas</CardTitle><CardDescription>{baseMap?.canonical_width || 2560}×{baseMap?.canonical_height || 1440}px</CardDescription></CardHeader><CardContent><div className="border-2 rounded-lg bg-white"><canvas ref={canvasRef} className="w-full" /></div></CardContent></Card>
       </div>
     </div>
   );

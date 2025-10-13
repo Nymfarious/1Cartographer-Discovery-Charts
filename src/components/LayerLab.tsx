@@ -3,11 +3,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Slider } from "@/components/ui/slider";
-import { Eye, EyeOff, Lock, Unlock, GripVertical, Download, Save, FileText, Calendar } from "lucide-react";
+import { Eye, EyeOff, Lock, Unlock, GripVertical, Download, Save, FileText, Calendar, Crosshair, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { DragDropContext, Droppable, Draggable, DropResult } from "react-beautiful-dnd";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import ExportLayers from "@/components/ExportLayers";
+import { useNavigate } from "react-router-dom";
 
 type Layer = {
   id: string;
@@ -31,6 +32,11 @@ type BaseMap = {
   canonical_width: number | null;
   canonical_height: number | null;
   file_path: string;
+  registration?: {
+    tl: { x: number; y: number };
+    tr: { x: number; y: number };
+    bl: { x: number; y: number };
+  } | null;
   url?: string;
 };
 
@@ -39,12 +45,14 @@ interface LayerLabProps {
 }
 
 export default function LayerLab({ baseMapId }: LayerLabProps) {
+  const navigate = useNavigate();
   const [baseMap, setBaseMap] = useState<BaseMap | null>(null);
   const [layers, setLayers] = useState<Layer[]>([]);
   const [loading, setLoading] = useState(true);
   const [yearRange, setYearRange] = useState<[number, number]>([0, 3000]);
   const [selectedTheme, setSelectedTheme] = useState<string>("all");
   const [availableThemes, setAvailableThemes] = useState<string[]>([]);
+  const [showRegistrationMarks, setShowRegistrationMarks] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -77,7 +85,11 @@ export default function LayerLab({ baseMapId }: LayerLabProps) {
         .from('tiles')
         .getPublicUrl(baseData.file_path);
 
-      setBaseMap({ ...baseData, url: baseUrl.publicUrl });
+      setBaseMap({ 
+        ...baseData, 
+        url: baseUrl.publicUrl,
+        registration: baseData.registration as any
+      });
 
       // Load overlays
       const { data: overlaysData, error: overlaysError } = await supabase
@@ -176,6 +188,47 @@ export default function LayerLab({ baseMapId }: LayerLabProps) {
         console.error(`Failed to load layer ${layer.theme}:`, err);
       }
     }
+
+    // Draw registration marks if enabled
+    if (showRegistrationMarks && baseMap.registration) {
+      drawRegistrationMarks(ctx, baseMap.registration);
+    }
+  }
+
+  function drawRegistrationMarks(ctx: CanvasRenderingContext2D, registration: any) {
+    if (!registration || !registration.tl || !registration.tr || !registration.bl) return;
+
+    const size = 30;
+    ctx.strokeStyle = 'rgba(255, 0, 0, 0.5)';
+    ctx.lineWidth = 2;
+    ctx.font = '14px Arial';
+    ctx.fillStyle = 'rgba(255, 0, 0, 0.7)';
+
+    // Draw each mark
+    [
+      { point: registration.tl, label: '1' },
+      { point: registration.tr, label: '2' },
+      { point: registration.bl, label: '3' }
+    ].forEach(({ point, label }) => {
+      // Crosshair
+      ctx.beginPath();
+      ctx.moveTo(point.x - size, point.y);
+      ctx.lineTo(point.x + size, point.y);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(point.x, point.y - size);
+      ctx.lineTo(point.x, point.y + size);
+      ctx.stroke();
+
+      // Circle
+      ctx.beginPath();
+      ctx.arc(point.x, point.y, size / 2, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // Label
+      ctx.fillText(label, point.x + size + 5, point.y + 5);
+    });
   }
 
   function toggleVisibility(id: string) {
@@ -292,6 +345,22 @@ export default function LayerLab({ baseMapId }: LayerLabProps) {
           <CardTitle className="text-lg flex items-center justify-between">
             <span>Layers</span>
             <div className="flex gap-2">
+              <Button 
+                size="sm" 
+                variant="ghost" 
+                onClick={() => setShowRegistrationMarks(!showRegistrationMarks)} 
+                title="Toggle registration marks"
+              >
+                <Crosshair className={`w-4 h-4 ${showRegistrationMarks ? 'text-[hsl(var(--brass))]' : ''}`} />
+              </Button>
+              <Button 
+                size="sm" 
+                variant="ghost" 
+                onClick={() => navigate(`/overlay-creator?baseMapId=${baseMapId}`)} 
+                title="Create overlay"
+              >
+                <Plus className="w-4 h-4" />
+              </Button>
               <Button size="sm" variant="ghost" onClick={saveAsGroup} title="Save stack">
                 <Save className="w-4 h-4" />
               </Button>
