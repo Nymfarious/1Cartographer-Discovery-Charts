@@ -13,6 +13,7 @@ import ImageEditor from "@/components/ImageEditor";
 import ImageUploader from "@/components/ImageUploader";
 import AssetGallery from "@/components/AssetGallery";
 import HDAdmin from "@/pages/HDAdmin";
+import LayerLab from "@/components/LayerLab";
 import { toast } from "sonner";
 
 type Hotspot = {
@@ -46,6 +47,7 @@ const Workspace = () => {
   const [activeTab, setActiveTab] = useState(posterId ? "viewer" : "library");
   const [isImageEditor, setIsImageEditor] = useState(false);
   const [selectedAssetId, setSelectedAssetId] = useState<string | null>(null);
+  const [showLayerLab, setShowLayerLab] = useState(false);
 
   useEffect(() => {
     if (posterId && posterId !== poster?.id) {
@@ -127,7 +129,8 @@ const Workspace = () => {
         setDziUrl(publicUrlData.publicUrl);
         setHotspots([]);
         setIsImageEditor(true);
-        setActiveTab("imageview");
+        setShowLayerLab(true);
+        setActiveTab("layers");
         setLoading(false);
         return;
       }
@@ -247,7 +250,7 @@ const Workspace = () => {
       {/* Main Content */}
       <div className="p-6 md:p-8 max-w-7xl mx-auto">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-3 mb-6 bg-[hsl(var(--card))] border-2 border-[hsl(var(--brass))]">
+          <TabsList className="grid w-full grid-cols-4 mb-6 bg-[hsl(var(--card))] border-2 border-[hsl(var(--brass))]">
             <TabsTrigger value="library" className="flex items-center gap-2 data-[state=active]:bg-[hsl(var(--gold))] data-[state=active]:text-[hsl(var(--leather))]">
               <Library className="w-4 h-4" />
               Map Library
@@ -259,6 +262,10 @@ const Workspace = () => {
             <TabsTrigger value="imageview" className="flex items-center gap-2 data-[state=active]:bg-[hsl(var(--gold))] data-[state=active]:text-[hsl(var(--leather))]">
               <MapPin className="w-4 h-4" />
               Image View
+            </TabsTrigger>
+            <TabsTrigger value="layers" className="flex items-center gap-2 data-[state=active]:bg-[hsl(var(--gold))] data-[state=active]:text-[hsl(var(--leather))]">
+              <Library className="w-4 h-4" />
+              Layer Lab
             </TabsTrigger>
           </TabsList>
 
@@ -441,6 +448,23 @@ const Workspace = () => {
                   </Card>
                 </aside>
               </div>
+            )}
+          </TabsContent>
+
+          {/* Layer Lab Tab */}
+          <TabsContent value="layers">
+            {!poster || !showLayerLab ? (
+              <Card className="border-2 border-[hsl(var(--brass))] shadow-xl bg-[hsl(var(--card))] p-12">
+                <div className="text-center">
+                  <MapPin className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
+                  <p className="text-lg text-muted-foreground mb-4">No base map selected</p>
+                  <Button onClick={() => setActiveTab("library")} variant="brass">
+                    Browse Library
+                  </Button>
+                </div>
+              </Card>
+            ) : (
+              <LayerLab baseMapId={poster.id} />
             )}
           </TabsContent>
 
