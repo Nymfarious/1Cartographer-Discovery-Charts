@@ -17,33 +17,48 @@ export type Database = {
       base_maps: {
         Row: {
           attribution: string | null
+          canonical_height: number | null
+          canonical_width: number | null
           created_at: string
           file_path: string
           id: string
           license: string | null
+          print_dpi: number | null
+          projection: string | null
           region: string
+          registration: Json | null
           source_url: string | null
           title: string
           uploaded_by: string | null
         }
         Insert: {
           attribution?: string | null
+          canonical_height?: number | null
+          canonical_width?: number | null
           created_at?: string
           file_path: string
           id?: string
           license?: string | null
+          print_dpi?: number | null
+          projection?: string | null
           region: string
+          registration?: Json | null
           source_url?: string | null
           title: string
           uploaded_by?: string | null
         }
         Update: {
           attribution?: string | null
+          canonical_height?: number | null
+          canonical_width?: number | null
           created_at?: string
           file_path?: string
           id?: string
           license?: string | null
+          print_dpi?: number | null
+          projection?: string | null
           region?: string
+          registration?: Json | null
           source_url?: string | null
           title?: string
           uploaded_by?: string | null
@@ -76,6 +91,44 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: []
+      }
+      exports: {
+        Row: {
+          base_map_id: string | null
+          created_at: string | null
+          created_by: string | null
+          file_path: string
+          id: string
+          kind: string
+          overlay_ids: string[] | null
+        }
+        Insert: {
+          base_map_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          file_path: string
+          id?: string
+          kind: string
+          overlay_ids?: string[] | null
+        }
+        Update: {
+          base_map_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          file_path?: string
+          id?: string
+          kind?: string
+          overlay_ids?: string[] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exports_base_map_id_fkey"
+            columns: ["base_map_id"]
+            isOneToOne: false
+            referencedRelation: "base_maps"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       hotspots: {
         Row: {
@@ -151,33 +204,86 @@ export type Database = {
         }
         Relationships: []
       }
+      overlay_groups: {
+        Row: {
+          base_map_id: string | null
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          id: string
+          overlay_ids: string[] | null
+          title: string
+        }
+        Insert: {
+          base_map_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          overlay_ids?: string[] | null
+          title: string
+        }
+        Update: {
+          base_map_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          overlay_ids?: string[] | null
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "overlay_groups_base_map_id_fkey"
+            columns: ["base_map_id"]
+            isOneToOne: false
+            referencedRelation: "base_maps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       overlays: {
         Row: {
+          author: string | null
           base_map_id: string
           created_at: string
           file_path: string
+          format: string | null
+          height_px: number | null
           id: string
           notes: string | null
           theme: string
+          width_px: number | null
           year: number
+          z_index: number | null
         }
         Insert: {
+          author?: string | null
           base_map_id: string
           created_at?: string
           file_path: string
+          format?: string | null
+          height_px?: number | null
           id?: string
           notes?: string | null
           theme: string
+          width_px?: number | null
           year: number
+          z_index?: number | null
         }
         Update: {
+          author?: string | null
           base_map_id?: string
           created_at?: string
           file_path?: string
+          format?: string | null
+          height_px?: number | null
           id?: string
           notes?: string | null
           theme?: string
+          width_px?: number | null
           year?: number
+          z_index?: number | null
         }
         Relationships: [
           {
