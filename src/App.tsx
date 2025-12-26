@@ -23,6 +23,9 @@ import OverlayCreator from "./pages/OverlayCreator";
 import GISViewer from "./pages/GISViewer";
 import NotFound from "./pages/NotFound";
 
+// Get basename for GitHub Pages deployment - uses BASE_URL from vite config
+const basename = import.meta.env.BASE_URL === '/' ? '' : import.meta.env.BASE_URL.replace(/\/$/, '');
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -30,7 +33,7 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <BrowserRouter basename="/DiscoveryCharts">
+      <BrowserRouter basename={basename}>
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/auth" element={<Auth />} />

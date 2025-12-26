@@ -5,7 +5,8 @@ import { componentTagger } from "lovable-tagger";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
-  base: '/DiscoveryCharts/',
+  // Use /DiscoveryCharts/ for GitHub Pages, root for Lovable preview
+  base: mode === 'production' ? '/DiscoveryCharts/' : '/',
   server: {
     host: "::",
     port: 8080,
