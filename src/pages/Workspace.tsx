@@ -185,15 +185,20 @@ const Workspace = () => {
 
       // Try to get signed URL for DZI
       try {
-        const { data: signedData } = await supabase.functions.invoke(
+        const { data: signedData, error: signedError } = await supabase.functions.invoke(
           'getSignedTile',
           { body: { path: posterData.dzi_path } }
         );
-        if (signedData?.url) {
+        if (signedError || signedData?.error) {
+          console.warn('DZI not found:', signedData?.error || signedError);
+          setDziUrl(''); // Clear URL so we show the "not available" state
+          toast.error('Map tiles not available for this poster. The file may not have been uploaded yet.');
+        } else if (signedData?.url) {
           setDziUrl(signedData.url);
         }
-      } catch {
-        // If DZI doesn't exist, show message
+      } catch (err) {
+        console.warn('Failed to get signed tile URL:', err);
+        setDziUrl('');
         toast.error('Map tiles not available for this poster');
       }
     } catch (error: any) {
@@ -369,7 +374,7 @@ const Workspace = () => {
                       </div>
                       
                       {/* Viewer */}
-                      {dziUrl && (
+                      {dziUrl ? (
                         <div className="rounded-lg overflow-hidden border border-[hsl(var(--border))] bg-[hsl(var(--muted))]">
                           {dziUrl.endsWith('.dzi') ? (
                             <HistoryViewer 
@@ -387,6 +392,14 @@ const Workspace = () => {
                               />
                             </div>
                           )}
+                        </div>
+                      ) : (
+                        <div className="rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--muted))] p-12 text-center">
+                          <MapPin className="w-12 h-12 mx-auto mb-4 text-muted-foreground opacity-50" />
+                          <p className="text-muted-foreground mb-2">Map tiles not available</p>
+                          <p className="text-sm text-muted-foreground/70">
+                            The DZI tiles for this poster haven't been uploaded yet.
+                          </p>
                         </div>
                       )}
                     </CardContent>
