@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DiscoveryCharts</title>
+  <script>
+    // SPA redirect for GitHub Pages
+    // Converts path to query string for React Router to handle
+    const path = window.location.pathname;
+    const basePath = '/DiscoveryCharts';
+    if (path.startsWith(basePath)) {
+      const route = path.slice(basePath.length) || '/';
+      const search = window.location.search;
+      const hash = window.location.hash;
+      const redirect = basePath + '/?p=' + encodeURIComponent(route + search + hash);
+      window.location.replace(redirect);
+    }
+  </script>
+</head>
+<body>
+  <noscript>Please enable JavaScript to use DiscoveryCharts.</noscript>
+</body>
+</html>

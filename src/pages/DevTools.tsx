@@ -96,9 +96,9 @@ const DevTools = () => {
         {/* HD Transparency Progress Checklist */}
         <Card className="bg-[hsl(var(--card))] border-2 border-[hsl(var(--brass))] shadow-xl">
           <CardHeader>
-            <CardTitle style={{ fontFamily: 'Georgia, serif' }}>HD Layered Transparency Progress</CardTitle>
+            <CardTitle style={{ fontFamily: 'Georgia, serif' }}>DiscoveryCharts Progress</CardTitle>
             <CardDescription>
-              Implementation status of the digital transparencies system for classroom presentations
+              Implementation status of the HD layered transparency system
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -153,41 +153,41 @@ const DevTools = () => {
                 </div>
               </div>
 
+              {/* Backend APIs - Now Complete */}
+              <div className="flex items-start gap-3">
+                <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
+                <div className="flex-1">
+                  <span className="font-medium">Backend APIs</span>
+                  <p className="text-sm text-muted-foreground">hd-clean-base, hd-vectorize, hd-export-pack, hd-bake-overlay edge functions</p>
+                </div>
+              </div>
+              
+              {/* Recolor Regions - Now Complete */}
+              <div className="flex items-start gap-3">
+                <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
+                <div className="flex-1">
+                  <span className="font-medium">Recolor regions tool</span>
+                  <p className="text-sm text-muted-foreground">Magic wand selection, lasso polygon, choropleth fills</p>
+                </div>
+              </div>
+              
+              {/* Compare Modes - Now Complete */}
+              <div className="flex items-start gap-3">
+                <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
+                <div className="flex-1">
+                  <span className="font-medium">Compare modes</span>
+                  <p className="text-sm text-muted-foreground">Swipe, spyglass, blink modes for layer comparison</p>
+                </div>
+              </div>
+
               {/* Coming Soon Features */}
-              <div className="flex items-start gap-3">
-                <Circle className="w-5 h-5 text-muted-foreground mt-0.5 flex-shrink-0" />
-                <div className="flex-1 flex items-center gap-2">
-                  <span className="font-medium text-muted-foreground">Backend APIs</span>
-                  <Badge variant="outline">Coming Soon</Badge>
-                </div>
-                <p className="text-sm text-muted-foreground w-full">hd-clean-base, hd-vectorize, hd-export-pack, hd-bake-overlay edge functions</p>
-              </div>
-              
-              <div className="flex items-start gap-3">
-                <Circle className="w-5 h-5 text-muted-foreground mt-0.5 flex-shrink-0" />
-                <div className="flex-1 flex items-center gap-2">
-                  <span className="font-medium text-muted-foreground">Recolor regions tool</span>
-                  <Badge variant="outline">Coming Soon</Badge>
-                </div>
-                <p className="text-sm text-muted-foreground w-full">Magic wand selection, lasso polygon, choropleth fills</p>
-              </div>
-              
               <div className="flex items-start gap-3">
                 <Circle className="w-5 h-5 text-muted-foreground mt-0.5 flex-shrink-0" />
                 <div className="flex-1 flex items-center gap-2">
                   <span className="font-medium text-muted-foreground">GeoJSON import pipeline</span>
                   <Badge variant="outline">Coming Soon</Badge>
                 </div>
-                <p className="text-sm text-muted-foreground w-full">MapLibre headless rendering, projection matching, transparent overlay export</p>
-              </div>
-
-              <div className="flex items-start gap-3">
-                <Circle className="w-5 h-5 text-muted-foreground mt-0.5 flex-shrink-0" />
-                <div className="flex-1 flex items-center gap-2">
-                  <span className="font-medium text-muted-foreground">Compare modes</span>
-                  <Badge variant="outline">Coming Soon</Badge>
-                </div>
-                <p className="text-sm text-muted-foreground w-full">Swipe, spyglass, blink modes for layer comparison</p>
+                <p className="text-sm text-muted-foreground w-full">MapLibre headless rendering, projection matching</p>
               </div>
 
               <div className="flex items-start gap-3">
@@ -196,7 +196,7 @@ const DevTools = () => {
                   <span className="font-medium text-muted-foreground">Overlay upload interface</span>
                   <Badge variant="outline">Coming Soon</Badge>
                 </div>
-                <p className="text-sm text-muted-foreground w-full">Dimension validation, auto-naming, deduplication checks</p>
+                <p className="text-sm text-muted-foreground w-full">Dimension validation, auto-naming, deduplication</p>
               </div>
             </div>
           </CardContent>

@@ -112,9 +112,9 @@ const Index = () => {
             <div>
               <h1 className="text-2xl font-bold text-[hsl(var(--parchment))] tracking-wide" 
                   style={{ textShadow: '2px 2px 4px rgba(0,0,0,0.5)' }}>
-                Historical Discoveries
+                DiscoveryCharts
               </h1>
-              <p className="text-sm text-[hsl(var(--parchment))]/70">Your Personal Archive</p>
+              <p className="text-sm text-[hsl(var(--parchment))]/70">HD Layered Historical Maps</p>
             </div>
           </div>
           

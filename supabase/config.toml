@@ -11,3 +11,15 @@ verify_jwt = true
 
 [functions.unzip-upload]
 verify_jwt = true
+
+[functions.hd-clean-base]
+verify_jwt = true
+
+[functions.hd-vectorize]
+verify_jwt = true
+
+[functions.hd-export-pack]
+verify_jwt = true
+
+[functions.hd-bake-overlay]
+verify_jwt = true

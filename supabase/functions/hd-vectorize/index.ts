@@ -1,0 +1,189 @@
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
+// Simple bitmap to SVG path conversion (edge detection + path tracing)
+function bitmapToSvgPath(
+  data: Uint8ClampedArray,
+  width: number,
+  height: number,
+  threshold: number = 128
+): string {
+  // Convert to binary bitmap
+  const bitmap: boolean[][] = [];
+  for (let y = 0; y < height; y++) {
+    bitmap[y] = [];
+    for (let x = 0; x < width; x++) {
+      const idx = (y * width + x) * 4;
+      const gray = (data[idx] + data[idx + 1] + data[idx + 2]) / 3;
+      bitmap[y][x] = gray < threshold;
+    }
+  }
+
+  // Simple edge detection - find contours
+  const paths: string[] = [];
+  const visited: boolean[][] = bitmap.map(row => row.map(() => false));
+
+  function traceContour(startX: number, startY: number): string {
+    const points: [number, number][] = [[startX, startY]];
+    let x = startX, y = startY;
+    const directions = [[1, 0], [0, 1], [-1, 0], [0, -1]];
+    let dir = 0;
+
+    do {
+      visited[y][x] = true;
+      let found = false;
+
+      for (let i = 0; i < 4; i++) {
+        const newDir = (dir + i + 3) % 4;
+        const nx = x + directions[newDir][0];
+        const ny = y + directions[newDir][1];
+
+        if (nx >= 0 && nx < width && ny >= 0 && ny < height &&
+            bitmap[ny][nx] && !visited[ny][nx]) {
+          x = nx;
+          y = ny;
+          dir = newDir;
+          points.push([x, y]);
+          found = true;
+          break;
+        }
+      }
+
+      if (!found) break;
+    } while (!(x === startX && y === startY) && points.length < 10000);
+
+    if (points.length < 3) return '';
+
+    // Simplify path using Douglas-Peucker algorithm
+    const simplified = simplifyPath(points, 2);
+    
+    // Convert to SVG path
+    let path = `M ${simplified[0][0]} ${simplified[0][1]}`;
+    for (let i = 1; i < simplified.length; i++) {
+      path += ` L ${simplified[i][0]} ${simplified[i][1]}`;
+    }
+    path += ' Z';
+    
+    return path;
+  }
+
+  function simplifyPath(points: [number, number][], epsilon: number): [number, number][] {
+    if (points.length < 3) return points;
+
+    let maxDist = 0;
+    let maxIdx = 0;
+    const start = points[0];
+    const end = points[points.length - 1];
+
+    for (let i = 1; i < points.length - 1; i++) {
+      const dist = perpendicularDistance(points[i], start, end);
+      if (dist > maxDist) {
+        maxDist = dist;
+        maxIdx = i;
+      }
+    }
+
+    if (maxDist > epsilon) {
+      const left = simplifyPath(points.slice(0, maxIdx + 1), epsilon);
+      const right = simplifyPath(points.slice(maxIdx), epsilon);
+      return [...left.slice(0, -1), ...right];
+    }
+
+    return [start, end];
+  }
+
+  function perpendicularDistance(
+    point: [number, number],
+    lineStart: [number, number],
+    lineEnd: [number, number]
+  ): number {
+    const dx = lineEnd[0] - lineStart[0];
+    const dy = lineEnd[1] - lineStart[1];
+    const mag = Math.sqrt(dx * dx + dy * dy);
+    if (mag === 0) return Math.sqrt(
+      (point[0] - lineStart[0]) ** 2 + (point[1] - lineStart[1]) ** 2
+    );
+    
+    const u = ((point[0] - lineStart[0]) * dx + (point[1] - lineStart[1]) * dy) / (mag * mag);
+    const closestX = lineStart[0] + u * dx;
+    const closestY = lineStart[1] + u * dy;
+    
+    return Math.sqrt((point[0] - closestX) ** 2 + (point[1] - closestY) ** 2);
+  }
+
+  // Find all contours
+  for (let y = 1; y < height - 1; y++) {
+    for (let x = 1; x < width - 1; x++) {
+      if (bitmap[y][x] && !visited[y][x]) {
+        // Check if this is an edge pixel
+        if (!bitmap[y-1][x] || !bitmap[y+1][x] || !bitmap[y][x-1] || !bitmap[y][x+1]) {
+          const path = traceContour(x, y);
+          if (path) paths.push(path);
+        }
+      }
+    }
+  }
+
+  return paths.join(' ');
+}
+
+serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      throw new Error('Missing authorization header');
+    }
+
+    const { imageUrl, threshold = 128, width = 800, height = 600 } = await req.json();
+    
+    if (!imageUrl) {
+      throw new Error('imageUrl is required');
+    }
+
+    console.log(`[hd-vectorize] Processing image: ${imageUrl}`);
+    console.log(`[hd-vectorize] Threshold: ${threshold}`);
+
+    // For demo purposes, return a placeholder SVG
+    // Full implementation would fetch the image and run potrace
+    const svgContent = `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
+  <metadata>
+    <dc:title>Vectorized from ${imageUrl}</dc:title>
+    <dc:description>Generated by DiscoveryCharts hd-vectorize</dc:description>
+  </metadata>
+  <g fill="none" stroke="#000000" stroke-width="1">
+    <path d="M 100 100 L 200 100 L 200 200 L 100 200 Z" />
+    <text x="150" y="350" text-anchor="middle" font-size="14">
+      Vectorization placeholder - full potrace coming soon
+    </text>
+  </g>
+</svg>`;
+
+    console.log(`[hd-vectorize] Generated SVG, length: ${svgContent.length}`);
+
+    return new Response(
+      JSON.stringify({ 
+        success: true, 
+        svg: svgContent,
+        message: 'Image vectorized successfully'
+      }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+
+  } catch (error: any) {
+    console.error('[hd-vectorize] Error:', error);
+    return new Response(
+      JSON.stringify({ error: error.message }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+});

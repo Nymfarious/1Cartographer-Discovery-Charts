@@ -156,7 +156,7 @@ const Auth = () => {
           </div>
           <div>
             <CardTitle className="text-3xl" style={{ fontFamily: 'Georgia, serif' }}>
-              Historical Discoveries
+              DiscoveryCharts
             </CardTitle>
             <CardDescription className="text-base italic mt-2">
               {isLogin ? "Welcome back, Explorer" : "Begin your journey through time"}
